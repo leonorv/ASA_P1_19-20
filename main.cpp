@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <stack>
+#include <vector>
 using namespace std;
 
 struct vertex {
@@ -47,10 +49,16 @@ struct vertex {
 struct Graph {
     int _numVertex;
     int _numEdges;
-    list<vertex*> _stack;
-    list<vertex*>::iterator _it;
-    list<vertex*> _vertexList;
-    list<vertex*> *_adjLists;
+    stack<int> _stack; 
+    list<int> *_adjLists;
+    list<int> *_sccLists;
+
+    int  *_lowList;
+    int  *_dtimeList;
+    int  *_valueList;
+    bool *_instackList;
+
+
 
     public:
 
@@ -60,84 +68,85 @@ struct Graph {
 
     void setV(int numVertex) {
         _numVertex = numVertex;
-        _adjLists = new list<vertex*>[numVertex];
-
+        _adjLists = new list<int>[numVertex];
+        _lowList = new int[_numVertex];
+        _dtimeList = new int[_numVertex];
+        _valueList = new int[_numVertex];
+        _instackList = new bool[_numVertex];
     }
 
     void setE(int numEdges) {
         _numEdges = numEdges;
     }
 
-    vertex* getVertex(int id) {
-        list<vertex*>::iterator i = _vertexList.begin();
-        advance(i, id - 1);
-        return *i;
-    }
-
-    void addEdge(vertex *u, vertex *v) { //add edge to directed graph
-        _adjLists[u->_id - 1].push_back(v);
+    void addEdge(int id1, int id2) { //add edge to directed graph
+        _adjLists[id1].push_back(id2);
     }
 
     void addVertex(int value, int id) {
-        vertex *v = new vertex(value, id);
-        _vertexList.push_back(v);
+        _lowList[id] = -1;
+        _dtimeList[id] = -1;
+        _valueList[id] = value;
+        _instackList[id] = false;
     }
 
 
-    void Tarjan_Visit(vertex *u) {
+    void Tarjan_Visit(int id) {
         static int time = 0;
-        u->_dtime = u->_low = ++time;
-        _stack.push_back(u);
-        u->_instack = true;
-        for (list<vertex*>::iterator i = _adjLists[u->_id - 1].begin(); i != _adjLists[u->_id - 1].end(); ++i) {
-            vertex *v = (*i);
-            //_it = find(_stack.begin(), _stack.end(), v);  
-
-            if (v->_dtime == -1) { //v not visited yet
+        _dtimeList[id] = _lowList[id] = ++time;
+        _stack.push(id);
+        _instackList[id] = true;
+        vector<int> sccVec;
+        int maxValue = _valueList[id];
+        for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
+            int v = (*i);
+            if (_dtimeList[v] == -1) { //v not visited yet
                 Tarjan_Visit(v);
-                u->setLow(min(u->_low, v->_low));
-                u->_value = max(u->_value, v->_value);
+                _lowList[id] = min(_lowList[id], _lowList[v]);
             }
 
-            //else if (_it != _stack.end()) { //the element exists in stack
-            else if(v->_instack) {
-                u->setLow(min(u->_low, v->_dtime));
-                u->_value = max(u->_value, v->_value);
+            else if(_instackList[v]) {
+                _lowList[id] = min(_lowList[id], _lowList[v]);
 
             }
+            _valueList[id] = max(_valueList[id], _valueList[v]);
+
         }
-        if (u->_dtime == u->_low) {
-            while(_stack.back()->_id != u->_id) {
-                _stack.pop_back();
+        if (_dtimeList[id] == _lowList[id]) {
+            while(_stack.top() != id) {
+                _instackList[_stack.top()] = false;
+                sccVec.push_back(_stack.top());
+                maxValue = max(maxValue, _valueList[_stack.top()]);
+                _stack.pop();
+
             }
-            _stack.pop_back();
+            _stack.pop();
+            _instackList[id] = false;
+
+            for (vector<int>::iterator i = sccVec.begin(); i != sccVec.end(); ++i) {
+                _valueList[(*i)] = maxValue;
+            }
+            
+
         }
+
+
+        
 
     }
 
     void SCC_Tarjan() {
-        for (vertex *v : _vertexList) { 
-            if (v->_dtime == -1) {
-                Tarjan_Visit(v);
+        for (int i = 0; i < _numVertex; i++) { 
+            if (_dtimeList[i] == -1) {
+                Tarjan_Visit(i);
             }
         }
 
     }
 
-    /*void printGraph() { //just to see the list
-        for (int v = 1; v <= _numVertex; ++v) {
-            cout << "\n Adjacency list of vertex "
-                << v << "\n head "; 
-            for (vertex *x : _adjLists[v - 1]) {
-            cout << "-> " << x->_id; 
-            }
-            printf("\n"); 
-        } 
-    }*/
-
     void printVertexList() {
-        for (vertex *v : _vertexList) {
-            cout << v->_value << endl;
+        for (int i = 0; i < _numVertex; i++) {
+            cout << _valueList[i] << endl;
         }
     }
 };
@@ -154,7 +163,7 @@ void processInput(int argc, char*argv[]) {
 
     sscanf(line.c_str(), "%d, %d", &V, &E);  
     graph.setV(V);
-    int id = 1;  
+    int id = 0;  
     int i = 0;
     while (getline(cin, line)) {
         if (i < graph._numVertex) {
@@ -164,7 +173,7 @@ void processInput(int argc, char*argv[]) {
         else {
             int id1, id2;
             sscanf(line.c_str(), "%d %d", &id1, &id2);
-            graph.addEdge(graph.getVertex(id1), graph.getVertex(id2));
+            graph.addEdge(id1 - 1, id2 - 1);
         }
         i++;
   }
@@ -175,4 +184,4 @@ int main(int argc, char* argv[]) {
     graph.SCC_Tarjan();
     graph.printVertexList();
     return 0; 
-} 
+}
