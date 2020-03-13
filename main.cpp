@@ -51,13 +51,11 @@ struct Graph {
     int _numEdges;
     stack<int> _stack; 
     list<int> *_adjLists;
-    list<int> *_sccLists;
 
     int  *_lowList;
     int  *_dtimeList;
     int  *_valueList;
     bool *_instackList;
-
 
 
     public:
@@ -96,7 +94,6 @@ struct Graph {
         _dtimeList[id] = _lowList[id] = ++time;
         _stack.push(id);
         _instackList[id] = true;
-        vector<int> sccVec;
         int maxValue = _valueList[id];
         for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
             int v = (*i);
@@ -106,32 +103,25 @@ struct Graph {
             }
 
             else if(_instackList[v]) {
-                _lowList[id] = min(_lowList[id], _lowList[v]);
+                //_lowList[id] = min(_lowList[id], _lowList[v]);
+                _lowList[id] = min(_lowList[id], _dtimeList[v]); //according to the original tarjan
 
             }
+            maxValue = max(_valueList[id], _valueList[v]);
             _valueList[id] = max(_valueList[id], _valueList[v]);
 
         }
         if (_dtimeList[id] == _lowList[id]) {
             while(_stack.top() != id) {
+                _valueList[_stack.top()] = maxValue;
                 _instackList[_stack.top()] = false;
-                sccVec.push_back(_stack.top());
-                maxValue = max(maxValue, _valueList[_stack.top()]);
                 _stack.pop();
 
             }
+            _valueList[_stack.top()] = maxValue;
             _stack.pop();
             _instackList[id] = false;
-
-            for (vector<int>::iterator i = sccVec.begin(); i != sccVec.end(); ++i) {
-                _valueList[(*i)] = maxValue;
-            }
-            
-
         }
-
-
-        
 
     }
 
