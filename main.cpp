@@ -50,12 +50,15 @@ struct Graph {
     int _numVertex;
     int _numEdges;
     stack<int> _stack; 
+    list<int> _topologicalList;
     list<int> *_adjLists;
 
     int  *_lowList;
     int  *_dtimeList;
     int  *_valueList;
+    int *_maxValues;
     bool *_instackList;
+    //bool *_dfsVisited;
 
 
     public:
@@ -66,11 +69,13 @@ struct Graph {
 
     void setV(int numVertex) {
         _numVertex = numVertex;
-        _adjLists = new list<int>[numVertex];
+        _adjLists = new list<int>[_numVertex];
         _lowList = new int[_numVertex];
         _dtimeList = new int[_numVertex];
         _valueList = new int[_numVertex];
+        _maxValues = new int[_numVertex];
         _instackList = new bool[_numVertex];
+        //_dfsVisited = new bool[_numVertex];
     }
 
     void setE(int numEdges) {
@@ -86,7 +91,25 @@ struct Graph {
         _dtimeList[id] = -1;
         _valueList[id] = value;
         _instackList[id] = false;
+        _maxValues[id] = value;
+        //_dfsVisited[id] = false;
     }
+
+    /*void DFS_Visit(int id) {
+        _dfsVisited[id] = true;
+        for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
+            if (!_dfsVisited[(*i)]) DFS_Visit((*i));
+            _valueList[id] = max(_valueList[id], _valueList[(*i)]);
+
+        }
+
+    }
+
+    void DFS() {
+        for (list<int>::iterator i = _topologicalList.begin(); i != _topologicalList.end(); ++i) {
+            DFS_Visit((*i));
+        }
+    }*/
 
 
     void Tarjan_Visit(int id) {
@@ -94,7 +117,7 @@ struct Graph {
         _dtimeList[id] = _lowList[id] = ++time;
         _stack.push(id);
         _instackList[id] = true;
-        int maxValue = _valueList[id];
+        //_maxValues[id] = _valueList[id];
         for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
             int v = (*i);
             if (_dtimeList[v] == -1) { //v not visited yet
@@ -103,22 +126,23 @@ struct Graph {
             }
 
             else if(_instackList[v]) {
-                //_lowList[id] = min(_lowList[id], _lowList[v]);
                 _lowList[id] = min(_lowList[id], _dtimeList[v]); //according to the original tarjan
 
             }
-            maxValue = max(_valueList[id], _valueList[v]);
+            _maxValues[id] = max(_maxValues[id], _valueList[v]);
             _valueList[id] = max(_valueList[id], _valueList[v]);
 
         }
         if (_dtimeList[id] == _lowList[id]) {
             while(_stack.top() != id) {
-                _valueList[_stack.top()] = maxValue;
+                _valueList[_stack.top()] = _maxValues[id];
                 _instackList[_stack.top()] = false;
+                _topologicalList.push_back(_stack.top());
                 _stack.pop();
 
             }
-            _valueList[_stack.top()] = maxValue;
+            _valueList[_stack.top()] = _maxValues[id];
+            _topologicalList.push_back(_stack.top());
             _stack.pop();
             _instackList[id] = false;
         }
@@ -131,7 +155,6 @@ struct Graph {
                 Tarjan_Visit(i);
             }
         }
-
     }
 
     void printVertexList() {
@@ -172,6 +195,7 @@ void processInput(int argc, char*argv[]) {
 int main(int argc, char* argv[]) { 
     processInput(argc, argv);
     graph.SCC_Tarjan();
+    //graph.DFS();
     graph.printVertexList();
     return 0; 
 }
