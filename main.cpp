@@ -58,7 +58,7 @@ struct Graph {
     int  *_valueList;
     int *_maxValues;
     bool *_instackList;
-    //bool *_dfsVisited;
+    bool *_dfsVisited;
 
 
     public:
@@ -75,7 +75,7 @@ struct Graph {
         _valueList = new int[_numVertex];
         _maxValues = new int[_numVertex];
         _instackList = new bool[_numVertex];
-        //_dfsVisited = new bool[_numVertex];
+        _dfsVisited = new bool[_numVertex];
     }
 
     void setE(int numEdges) {
@@ -92,10 +92,10 @@ struct Graph {
         _valueList[id] = value;
         _instackList[id] = false;
         _maxValues[id] = value;
-        //_dfsVisited[id] = false;
+        _dfsVisited[id] = false;
     }
 
-    /*void DFS_Visit(int id) {
+    void DFS_Visit(int id) {
         _dfsVisited[id] = true;
         for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
             if (!_dfsVisited[(*i)]) DFS_Visit((*i));
@@ -109,7 +109,7 @@ struct Graph {
         for (list<int>::iterator i = _topologicalList.begin(); i != _topologicalList.end(); ++i) {
             DFS_Visit((*i));
         }
-    }*/
+    }
 
 
     void Tarjan_Visit(int id) {
@@ -117,7 +117,6 @@ struct Graph {
         _dtimeList[id] = _lowList[id] = ++time;
         _stack.push(id);
         _instackList[id] = true;
-        //_maxValues[id] = _valueList[id];
         for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
             int v = (*i);
             if (_dtimeList[v] == -1) { //v not visited yet
@@ -137,7 +136,6 @@ struct Graph {
             while(_stack.top() != id) {
                 _valueList[_stack.top()] = _maxValues[id];
                 _instackList[_stack.top()] = false;
-                _topologicalList.push_back(_stack.top());
                 _stack.pop();
 
             }
@@ -195,7 +193,7 @@ void processInput(int argc, char*argv[]) {
 int main(int argc, char* argv[]) { 
     processInput(argc, argv);
     graph.SCC_Tarjan();
-    //graph.DFS();
+    graph.DFS();
     graph.printVertexList();
     return 0; 
 }
