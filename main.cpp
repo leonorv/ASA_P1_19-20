@@ -8,56 +8,22 @@
 #include <vector>
 using namespace std;
 
-struct vertex {
-    int _id;
-    int _value;
-    int _low;
-    int _dtime;
-    int _visited;
-    bool _instack;
-    vertex *_pi;
-
-    public:
-    vertex(int value, int id) {
-        _value = value;
-         _id = id;
-        _visited = 0;
-        _dtime = -1;
-        _low = -1;
-        _instack = false;
-
-    }
-
-    bool operator==(const vertex *v) const {
-     return _id == v->_id;
-  }
-
-  void setID(int id) {
-      _id = id;
-  }
-
-  void setLow(int low) {
-      _low = low;
-  }
-
-  void setDTime(int dtime) {
-      _dtime = dtime;
-  }
-
-};
-
 struct Graph {
     int _numVertex;
     int _numEdges;
+    int _numSCC;
     stack<int> _stack; 
-    list<int> _topologicalList;
+    list<int> _SCCList;
     list<int> *_adjLists;
+    list<int> *_SCCLists;
 
     int  *_lowList;
     int  *_dtimeList;
     int  *_valueList;
     int *_maxValues;
+    int *_indexList;
     bool *_instackList;
+    bool *_isSCChead;
     bool *_dfsVisited;
 
 
@@ -69,12 +35,16 @@ struct Graph {
 
     void setV(int numVertex) {
         _numVertex = numVertex;
+        _numSCC = 0;
         _adjLists = new list<int>[_numVertex];
+        _SCCLists = new list<int>[_numVertex];
         _lowList = new int[_numVertex];
         _dtimeList = new int[_numVertex];
         _valueList = new int[_numVertex];
         _maxValues = new int[_numVertex];
+        _indexList = new int[_numVertex];
         _instackList = new bool[_numVertex];
+        _isSCChead = new bool[_numVertex];
         _dfsVisited = new bool[_numVertex];
     }
 
@@ -92,67 +62,9 @@ struct Graph {
         _valueList[id] = value;
         _instackList[id] = false;
         _maxValues[id] = value;
+        _isSCChead[id] = false;
         _dfsVisited[id] = false;
-    }
-
-    void DFS_Visit(int id) {
-        _dfsVisited[id] = true;
-        for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
-            if (!_dfsVisited[(*i)]) DFS_Visit((*i));
-            _valueList[id] = max(_valueList[id], _valueList[(*i)]);
-
-        }
-
-    }
-
-    void DFS() {
-        for (list<int>::iterator i = _topologicalList.begin(); i != _topologicalList.end(); ++i) {
-            DFS_Visit((*i));
-        }
-    }
-
-
-    void Tarjan_Visit(int id) {
-        static int time = 0;
-        _dtimeList[id] = _lowList[id] = ++time;
-        _stack.push(id);
-        _instackList[id] = true;
-        for (list<int>::iterator i = _adjLists[id].begin(); i != _adjLists[id].end(); ++i) {
-            int v = (*i);
-            if (_dtimeList[v] == -1) { //v not visited yet
-                Tarjan_Visit(v);
-                _lowList[id] = min(_lowList[id], _lowList[v]);
-            }
-
-            else if(_instackList[v]) {
-                _lowList[id] = min(_lowList[id], _dtimeList[v]); //according to the original tarjan
-
-            }
-            _maxValues[id] = max(_maxValues[id], _valueList[v]);
-            _valueList[id] = max(_valueList[id], _valueList[v]);
-
-        }
-        if (_dtimeList[id] == _lowList[id]) {
-            while(_stack.top() != id) {
-                _valueList[_stack.top()] = _maxValues[id];
-                _instackList[_stack.top()] = false;
-                _stack.pop();
-
-            }
-            _valueList[_stack.top()] = _maxValues[id];
-            _topologicalList.push_back(_stack.top());
-            _stack.pop();
-            _instackList[id] = false;
-        }
-
-    }
-
-    void SCC_Tarjan() {
-        for (int i = 0; i < _numVertex; i++) { 
-            if (_dtimeList[i] == -1) {
-                Tarjan_Visit(i);
-            }
-        }
+        _indexList[id] = id;
     }
 
     void printVertexList() {
@@ -163,6 +75,92 @@ struct Graph {
 };
 
 Graph graph(0);
+Graph SCC_graph(0);
+
+void create_SCC_graph(Graph *og, Graph *sccg) {
+    printf("há %d sccs\n", og->_numSCC);
+    for (int i : og->_SCCList) {
+        for (list<int>::iterator i2 = og->_SCCLists[i].begin(); i2 != og->_SCCLists[i].end(); ++i2) {
+            if (og->_isSCChead[(*i2)]) {
+                printf("%d liga a %d\n", og->_indexList[i] + 1, og->_indexList[(*i2)] + 1);
+                sccg->addEdge(i, (*i2));
+            }
+            else printf("%d não é head e estamos a analisar %d\n", (*i2) + 1, i + 1);
+        }
+    }
+}
+
+void updateGraph(Graph *og, Graph *sccg) {
+    for (int i = 0; i < og->_numVertex; i++) {
+        //if (sccg->_valueList[i] != NULL)
+            og->_valueList[i] = sccg->_valueList[i];
+    }
+}
+
+void DFS_Visit(Graph *g, int id) {
+    g->_dfsVisited[id] = true;
+    for (list<int>::iterator i = g->_adjLists[id].begin(); i != g->_adjLists[id].end(); ++i) {
+        if (!g->_dfsVisited[(*i)]) DFS_Visit(g, (*i));
+        //g->_valueList[id] = max(g->_valueList[id], g->_valueList[(*i)]);
+        printf("oi\n");
+        g->_valueList[id] = 22;
+    }
+
+}
+
+void DFS(Graph *g) {
+    for (int i = 0; i < g->_numVertex; i++) { 
+        printf("vamos fazer dfs visit %d\n", i + 1);
+        DFS_Visit(g, i);
+    }
+}
+
+void Tarjan_Visit(Graph *g, int id) {
+    static int time = 0;
+    g->_dtimeList[id] = g->_lowList[id] = ++time;
+    g->_stack.push(id);
+    g->_instackList[id] = true;
+    for (list<int>::iterator i = g->_adjLists[id].begin(); i != g->_adjLists[id].end(); ++i) {
+        int v = (*i);
+        if (g->_dtimeList[v] == -1) { //v not visited yet
+            Tarjan_Visit(g, v);
+            g->_lowList[id] = min(g->_lowList[id], g->_lowList[v]);
+        }
+
+        else if(g->_instackList[v]) {
+            g->_lowList[id] = min(g->_lowList[id], g->_dtimeList[v]); //according to the original tarjan
+
+        }
+        g->_maxValues[id] = max(g->_maxValues[id], g->_valueList[v]);
+    }
+
+    g->_valueList[id] = g->_maxValues[id];
+
+    if (g->_dtimeList[id] == g->_lowList[id]) {
+        while(g->_stack.top() != id) {
+            g->_valueList[g->_stack.top()] = g->_maxValues[id];
+            g->_SCCLists[id].push_back(g->_stack.top()); //meter na lista de sccs da head
+            g->_instackList[g->_stack.top()] = false;
+            g->_stack.pop();
+
+        }
+        g->_valueList[g->_stack.top()] = g->_maxValues[id];
+        g->_numSCC++;
+        g->_SCCList.push_back(id);
+        g->_isSCChead[g->_stack.top()] = true; 
+        g->_stack.pop();
+        g->_instackList[id] = false;
+    }
+}
+
+void SCC_Tarjan(Graph *g) {
+    SCC_graph.setV(g->_numVertex);
+    for (int i = 0; i < g->_numVertex; i++) { 
+        if (g->_dtimeList[i] == -1) {
+            Tarjan_Visit(g, i);
+        }
+    }
+}
 
 void processInput(int argc, char*argv[]) {
     int V;
@@ -192,8 +190,9 @@ void processInput(int argc, char*argv[]) {
 
 int main(int argc, char* argv[]) { 
     processInput(argc, argv);
-    graph.SCC_Tarjan();
-    graph.DFS();
+    SCC_Tarjan(&graph);
+    create_SCC_graph(&graph, &SCC_graph);
+    DFS(&SCC_graph);
     graph.printVertexList();
     return 0; 
 }
